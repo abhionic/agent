@@ -1,0 +1,9 @@
+tensorflow
+tensorflow-text
+keras
+keras-hub
+kagglehub
+wikipedia
+ddgs
+json
+re
