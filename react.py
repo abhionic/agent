@@ -35,6 +35,7 @@ reserved_tokens = control_tokens + structure_tokens
 tokenizer = kh.tokenizers.WordPieceTokenizer(vocab, lowercase=True, strip_accents=True,
                         special_tokens=reserved_tokens, special_tokens_in_strings=True)
 long_packer = kh.layers.StartEndPacker(seq_len, return_padding_mask=True)
+sampler = kh.samplers.TopPSampler(temperature=1, p=0.1, k=5)
 
 #ReAct orchestration
 def get_relevant_snippet(text, query, max_chars=250):
