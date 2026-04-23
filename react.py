@@ -168,7 +168,7 @@ def react_run(question, max_steps=3):
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
-    with st.chat_message('assistant'): st.write("Reached max steps.")
+    with st.chat_message('assistant'): response = st.write("Reached max steps.")
     return
 
 # react to user input
@@ -179,5 +179,3 @@ if prompt := st.chat_input('please enter your symptoms'):
     with st.chat_message('user'):
         st.markdown(prompt)
     react_run(prompt)
-    # add assistant response to chat history
-    st.session_state.messages.append({'role': 'assistant', 'content': response})
