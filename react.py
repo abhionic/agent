@@ -36,6 +36,9 @@ tokenizer = kh.tokenizers.WordPieceTokenizer(vocab, lowercase=True, strip_accent
                         special_tokens=reserved_tokens, special_tokens_in_strings=True)
 long_packer = kh.layers.StartEndPacker(seq_len, return_padding_mask=True)
 sampler = kh.samplers.TopPSampler(temperature=1, p=0.1, k=5)
+def next(prompt, cache, index): # compute logits
+    logits = model(prompt)[:, index-1, :]
+    hidden_states = None; return logits, hidden_states, cache
 
 #ReAct orchestration
 def get_relevant_snippet(text, query, max_chars=250):
