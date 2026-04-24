@@ -158,7 +158,8 @@ def react_run(question, max_steps=3):
             # Update context for printing detokenization, optional for return
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: response = stream(f"Final Thought: {thought}"); full += response
+            if thought: 
+              response = f"Final Thought: {thought}"; stream(response); full += response
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
