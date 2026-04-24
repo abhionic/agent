@@ -18,7 +18,7 @@ if 'messages' not in st.session_state: st.session_state.messages = []
 # stream assistant response in chat message container
 def stream(outext): 
     for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-    with st.chat_message('assistant'): return st.write_stream(stream_data)
+    with st.chat_message('assistant'): st.write_stream(stream_data)
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -128,10 +128,12 @@ def react_run(question, max_steps=3):
             text = tokenizer.detokenize(out)
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: response = stream(f"Step {step+1} Thought: {thought}"); full += response
+            if thought: response = f"Step {step+1} Thought: {thought}"
+                        stream(response); full += response
 
             act_content = extract(gen_tokens, act_start_id, act_end_id)
-            response = stream(f"Step {step+1} Action: {act_content}"); full += response
+            response = f"Step {step+1} Action: {act_content}"
+            stream(response); full += response
 
             # Execute the parsed tool/function
             if act_content.startswith('search'):
@@ -145,7 +147,7 @@ def react_run(question, max_steps=3):
             # Force the model to answer on the final step by altering the observation
             if step == max_steps-2: obs += " Provide the final answer now."
 
-            response = st.write(f"Observation: {obs}\n"); full += response
+            response = f"Observation: {obs}\n"; stream(response); full += response
             # Append observation to context for the next loop
             text += f" <|Observe|> {obs} <|/Observe|>"
 
@@ -158,13 +160,13 @@ def react_run(question, max_steps=3):
             if thought: response = stream(f"Final Thought: {thought}"); full += response
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
-            if ans: response = stream(f"Answer: {ans}"); full += response
+            if ans: response = f"Answer: {ans}"; stream(response); full += response
             return full
 
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
-    response = stream("Reached max steps."); full += response
+    response = "Reached max steps."; stream(response); full += response
     return full
 
 # react to user input
