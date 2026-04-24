@@ -19,9 +19,6 @@ if 'messages' not in st.session_state: st.session_state.messages = []
 def stream(outext): 
     for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
     with st.chat_message('assistant'): out = st.write_stream(stream_data)
-def stream1(outext): 
-    for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-    with st.chat_message('assistant'): out = st.write_stream(stream_data); return out
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -132,12 +129,11 @@ def react_run(question, max_steps=3):
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
             if thought: 
-              response = stream1(f"Step {step+1} Thought: {thought}"); full += response
-              #response = f"Step {step+1} Thought: {thought}"
-              #stream(response); full += response
+              response = f"Step {step+1} Thought: {thought}\n"
+              stream(response); full += response
 
             act_content = extract(gen_tokens, act_start_id, act_end_id)
-            response = f"Step {step+1} Action: {act_content}"
+            response = f"Step {step+1} Action: {act_content}\n"
             stream(response); full += response
 
             # Execute the parsed tool/function
@@ -163,7 +159,7 @@ def react_run(question, max_steps=3):
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
             if thought: 
-              response = f"Final Thought: {thought}"; stream(response); full += response
+              response = f"Final Thought: {thought}\n"; stream(response); full += response
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
