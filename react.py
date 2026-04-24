@@ -177,6 +177,6 @@ if prompt := st.chat_input('please enter your query'):
     st.session_state.messages.append({'role': 'user', 'content': prompt})
     # display user message in chat message container
     with st.chat_message('user'): st.markdown(prompt)
-    full_response = react_run(prompt)
+    react_run(prompt)
     # add assistant response to chat history
     #st.session_state.messages.append({'role': 'assistant', 'content': full})
