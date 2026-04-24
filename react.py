@@ -12,19 +12,6 @@ st.title('ReAct Agent')
 os.environ['KAGGLE_USERNAME'] = st.secrets['kaggle_username']
 os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 
-# initialize chat history
-if 'messages' not in st.session_state: st.session_state.messages = []
-
-# stream assistant response in chat message container
-def stream(outext):
-  def stream_data():
-    for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-  with st.chat_message('assistant'): st.write_stream(stream_data)
-
-# display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message['role']): st.markdown(message['content'])
-
 # load the model once and use it across all users and sessions
 @st.cache_resource
 def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
@@ -45,6 +32,19 @@ sampler = kh.samplers.TopPSampler(temperature=1, p=0.1, k=5)
 def next(prompt, cache, index): # compute logits
     logits = model(prompt)[:, index-1, :]
     hidden_states = None; return logits, hidden_states, cache
+
+# initialize chat history
+if 'messages' not in st.session_state: st.session_state.messages = []
+
+# stream assistant response in chat message container
+def stream(outext):
+  def stream_data():
+    for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
+  with st.chat_message('assistant'): st.write_stream(stream_data)
+
+# display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message['role']): st.markdown(message['content'])
 
 #ReAct orchestration
 def get_relevant_snippet(text, query, max_chars=250):
