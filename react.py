@@ -91,7 +91,7 @@ def calc(expr): # calculator tool
     except Exception as e: return f"Error: {e}"
 
 def react_run(question, max_steps=3):
-    text = f'<|User|> {question} <|End|>'; full = ""
+    text = f'<|User|> {question} <|End|>'; global full
 
     # Precompute special token IDs for matching
     act_start_id, act_end_id = tokenizer('<|Act|>')[0], tokenizer('<|/Act|>')[0]
