@@ -18,7 +18,7 @@ if 'messages' not in st.session_state: st.session_state.messages = []
 # stream assistant response in chat message container
 def stream(outext): 
     for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-    with st.chat_message('assistant'): out = st.write_stream(stream_data)
+    with st.chat_message('assistant'): st.write_stream(stream_data)
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
