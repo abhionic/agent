@@ -128,8 +128,9 @@ def react_run(question, max_steps=3):
             text = tokenizer.detokenize(out)
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: response = f"Step {step+1} Thought: {thought}"
-                        stream(response); full += response
+            if thought: 
+              response = f"Step {step+1} Thought: {thought}"
+              stream(response); full += response
 
             act_content = extract(gen_tokens, act_start_id, act_end_id)
             response = f"Step {step+1} Action: {act_content}"
