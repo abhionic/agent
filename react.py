@@ -30,7 +30,7 @@ def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras')
-vocab = f'{path}/vocab.txt'; seq_len = 512
+vocab = f'{path}/vocab.txt'; seq_len = 512; full = ""
 
 # tokenizer
 control_tokens = ['[PAD]', '[UNK]']
@@ -91,7 +91,7 @@ def calc(expr): # calculator tool
     except Exception as e: return f"Error: {e}"
 
 def react_run(question, max_steps=3):
-    text = f'<|User|> {question} <|End|>'; full = ""
+    text = f'<|User|> {question} <|End|>'
 
     # Precompute special token IDs for matching
     act_start_id, act_end_id = tokenizer('<|Act|>')[0], tokenizer('<|/Act|>')[0]
@@ -163,13 +163,13 @@ def react_run(question, max_steps=3):
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
-            return full
+            return
 
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
     response = "Reached max steps."; stream(response); full += response
-    return full
+    return
 
 # react to user input
 if prompt := st.chat_input('please enter your query'):
@@ -177,6 +177,6 @@ if prompt := st.chat_input('please enter your query'):
     st.session_state.messages.append({'role': 'user', 'content': prompt})
     # display user message in chat message container
     with st.chat_message('user'): st.markdown(prompt)
-    full_response = react_run(prompt)
+    react_run(prompt)
     # add assistant response to chat history
-    st.session_state.messages.append({'role': 'assistant', 'content': full_response})
+    st.session_state.messages.append({'role': 'assistant', 'content': full})
