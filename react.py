@@ -1,27 +1,32 @@
 # Abhishek Dutta, Copyright 2026, MIT License.
 
-import streamlit as st; import os; import time
+import streamlit as st; import os; os.environ['KERAS_BACKEND'] = 'jax'
 import keras; from keras import ops
 import keras_hub as kh; import kagglehub
 import wikipedia, json, re; from ddgs import DDGS
+import tensorflow as tf; import time
+if tf.config.list_physical_devices('GPU'):
+  keras.mixed_precision.set_global_policy('mixed_float16')
 
 st.title('ReAct Agent')
 os.environ['KAGGLE_USERNAME'] = st.secrets['kaggle_username']
 os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 
 # initialize chat history
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
+if 'messages' not in st.session_state: st.session_state.messages = []
+
+# stream assistant response in chat message container
+def stream(outext): 
+    for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
+    with st.chat_message('assistant'): return st.write_stream(stream_data)
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
-    with st.chat_message(message['role']):
-        st.markdown(message['content'])
+    with st.chat_message(message['role']): st.markdown(message['content'])
 
 # load the model once and use it across all users and sessions
 @st.cache_resource
-def load_model():
-    return kagglehub.model_download('abhionic/agent/keras/15m')
+def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras')
@@ -86,9 +91,7 @@ def calc(expr): # calculator tool
     except Exception as e: return f"Error: {e}"
 
 def react_run(question, max_steps=3):
-    text = f'<|User|> {question} <|End|>'
-    with st.chat_message('assistant'):
-        response = st.write(f"Question: {question}\n" + "-"*40)
+    text = f'<|User|> {question} <|End|>'; full = ""
 
     # Precompute special token IDs for matching
     act_start_id, act_end_id = tokenizer('<|Act|>')[0], tokenizer('<|/Act|>')[0]
@@ -125,13 +128,10 @@ def react_run(question, max_steps=3):
             text = tokenizer.detokenize(out)
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: 
-              with st.chat_message('assistant'):
-                  response = st.write(f"Step {step + 1} Thought: {thought}")
+            if thought: response = stream(f"Step {step+1} Thought: {thought}"); full += response
 
             act_content = extract(gen_tokens, act_start_id, act_end_id)
-            with st.chat_message('assistant'):
-                response = st.write(f"Step {step + 1} Action: {act_content}")
+            response = stream(f"Step {step+1} Action: {act_content}"); full += response
 
             # Execute the parsed tool/function
             if act_content.startswith('search'):
@@ -145,7 +145,7 @@ def react_run(question, max_steps=3):
             # Force the model to answer on the final step by altering the observation
             if step == max_steps-2: obs += " Provide the final answer now."
 
-            with st.chat_message('assistant'): response = st.write(f"Observation: {obs}\n")
+            response = st.write(f"Observation: {obs}\n"); full += response
             # Append observation to context for the next loop
             text += f" <|Observe|> {obs} <|/Observe|>"
 
@@ -155,27 +155,24 @@ def react_run(question, max_steps=3):
             # Update context for printing detokenization, optional for return
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: 
-              with st.chat_message('assistant'):
-                  response = st.write(f"Final Thought: {thought}")
+            if thought: response = stream(f"Final Thought: {thought}"); full += response
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
-            if ans: 
-              with st.chat_message('assistant'):
-                  response = st.write(f"Answer: {ans}")
-            return
+            if ans: response = stream(f"Answer: {ans}"); full += response
+            return full
 
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
-    with st.chat_message('assistant'): response = st.write("Reached max steps.")
-    return
+    response = stream("Reached max steps."); full += response
+    return full
 
 # react to user input
-if prompt := st.chat_input('please enter your symptoms'):
+if prompt := st.chat_input('please enter your query'):
     # add user message to chat history
     st.session_state.messages.append({'role': 'user', 'content': prompt})
     # display user message in chat message container
-    with st.chat_message('user'):
-        st.markdown(prompt)
-    react_run(prompt)
+    with st.chat_message('user'): st.markdown(prompt)
+    full_response = react_run(prompt)
+    # add assistant response to chat history
+    st.session_state.messages.append({'role': 'assistant', 'content': full_response})
