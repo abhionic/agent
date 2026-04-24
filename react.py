@@ -163,13 +163,13 @@ def react_run(question, max_steps=3):
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
-            return full
+            return 
 
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
     response = "Reached max steps."; stream(response); full += response
-    return full
+    return 
 
 # react to user input
 if prompt := st.chat_input('please enter your query'):
