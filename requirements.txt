@@ -1,5 +1,6 @@
 keras
 keras-hub
+jax
 kagglehub
 wikipedia
 ddgs
