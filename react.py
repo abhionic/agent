@@ -129,11 +129,11 @@ def react_run(question, max_steps=3):
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
             if thought: 
-              response = f"Step {step+1} Thought: {thought}\n"
+              response = f"Step {step+1} Thought: {thought}"
               stream(response); full += response
 
             act_content = extract(gen_tokens, act_start_id, act_end_id)
-            response = f"Step {step+1} Action: {act_content}\n"
+            response = f"Step {step+1} Action: {act_content}"
             stream(response); full += response
 
             # Execute the parsed tool/function
@@ -148,7 +148,7 @@ def react_run(question, max_steps=3):
             # Force the model to answer on the final step by altering the observation
             if step == max_steps-2: obs += " Provide the final answer now."
 
-            response = f"Observation: {obs}\n"; stream(response); full += response
+            response = f"Observation: {obs}"; stream(response); full += response
             # Append observation to context for the next loop
             text += f" <|Observe|> {obs} <|/Observe|>"
 
@@ -159,7 +159,7 @@ def react_run(question, max_steps=3):
 
             thought = extract(gen_tokens, think_start_id, think_end_id)
             if thought: 
-              response = f"Final Thought: {thought}\n"; stream(response); full += response
+              response = f"Final Thought: {thought}"; stream(response); full += response
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
