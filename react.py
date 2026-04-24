@@ -16,9 +16,10 @@ os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 if 'messages' not in st.session_state: st.session_state.messages = []
 
 # stream assistant response in chat message container
-def stream(outext): 
+def stream(outext):
+  def stream_data():
     for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-    with st.chat_message('assistant'): st.write_stream(stream_data)
+  with st.chat_message('assistant'): st.write_stream(stream_data)
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -163,13 +164,13 @@ def react_run(question, max_steps=3):
 
             ans = extract(gen_tokens, ans_start_id, ans_end_id)
             if ans: response = f"Answer: {ans}"; stream(response); full += response
-            return 
+            return full
 
         # Edge case: generation stopped before an Act or End block
         else: text = tokenizer.detokenize(out)
 
     response = "Reached max steps."; stream(response); full += response
-    return 
+    return full
 
 # react to user input
 if prompt := st.chat_input('please enter your query'):
