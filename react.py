@@ -14,7 +14,7 @@ os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 
 # load the model once and use it across all users and sessions
 @st.cache_resource
-def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
+def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m/1')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras')
