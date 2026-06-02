@@ -18,20 +18,6 @@ def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras')
-vocab = f'{path}/vocab.txt'; seq_len = 512
-
-# tokenizer
-control_tokens = ['[PAD]', '[UNK]']
-structure_tokens = ['<|User|>', '<|Model|>', '<|Think|>', '<|Act|>', '<|Observe|>',
-  '<|Answer|>', '<|/Think|>', '<|/Act|>', '<|/Observe|>', '<|/Answer|>', '<|End|>']
-reserved_tokens = control_tokens + structure_tokens
-tokenizer = kh.tokenizers.WordPieceTokenizer(vocab, lowercase=True, strip_accents=True,
-                        special_tokens=reserved_tokens, special_tokens_in_strings=True)
-long_packer = kh.layers.StartEndPacker(seq_len, return_padding_mask=True)
-sampler = kh.samplers.TopPSampler(temperature=1, p=0.1, k=5)
-def next(prompt, cache, index): # compute logits
-    logits = model(prompt)[:, index-1, :]
-    hidden_states = None; return logits, hidden_states, cache
 
 # initialize chat history
 if 'messages' not in st.session_state: st.session_state.messages = []
@@ -56,8 +42,7 @@ def get_relevant_snippet(text, query, max_chars=250):
     scored = []
     for s in sentences:
         s_terms = set(re.findall(r'\w+', s.lower()))
-        score = len(query_terms & s_terms)
-        scored.append((score, s))
+        score = len(query_terms & s_terms); scored.append((score, s))
 
     # Sort by score (highest first) and take the best 2 sentences
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -87,90 +72,57 @@ def search_duck(query): # duckduckgo tool
 
 def calc(expr): # calculator tool
     try:
-        clean_expr = expr.replace(" ", "") # remove WordPiece artifact spaces
+        clean_expr = expr.replace(" ", "") # remove tokenizer artifact spaces
         return str(eval(clean_expr))
     except Exception as e: return f"Error: {e}"
 
 def react_run(question, max_steps=3):
-    text = f'<|User|> {question} <|End|>'; full = ""
+    text = f'<|User|> {question} <|End|>'; print(f"Question: {question}\n" + "-"*40)
+    tokenizer = model.preprocessor.tokenizer
 
-    # Precompute special token IDs for matching
-    act_start_id, act_end_id = tokenizer('<|Act|>')[0], tokenizer('<|/Act|>')[0]
-    think_start_id, think_end_id = tokenizer('<|Think|>')[0], tokenizer('<|/Think|>')[0]
-    ans_start_id, ans_end_id = tokenizer('<|Answer|>')[0], tokenizer('<|/Answer|>')[0]
-    end_id = tokenizer('<|End|>')[0]
-
-    # Helper to extract text between specific start/end tags from generated tokens
-    def extract(tokens, start_id, end_id):
-        s = ops.where(ops.equal(tokens, start_id))[0]
-        e = ops.where(ops.equal(tokens, end_id))[0]
-        if ops.size(s) > 0 and ops.size(e) > 0:
-            return tokenizer.detokenize(tokens[int(s[0])+1 : int(e[0])]).strip()
-        return ""
+    # Precompute special token IDs for stopping
+    act_end_id = tokenizer.token_to_id('<|/Act|>'); end_id = tokenizer.token_to_id('<|End|>')
 
     for step in range(max_steps):
-        # Prepare prompt tokens
-        tokens, _ = long_packer(tokenizer(text))
-        tokens = ops.expand_dims(tokens, axis=0)
-        ct = ops.count_nonzero(tokens)
+        # Generate text
+        out = model.generate(text, max_length=model.preprocessor.sequence_length, 
+                             stop_token_ids=[act_end_id, end_id])
+        gen_text = out[len(text):]; text = out
 
-        # Generate next segment of tokens until an early stop (or max tokens)
-        out = sampler(next=next, prompt=tokens, index=ct)
-        padidx = ops.where(ops.equal(out, 0))
-        out = out[0, :padidx[1][0]] if ops.size(padidx) > 0 else out[0]
-
-        gen_tokens = out[ct:]
-        act_end_idx = ops.where(ops.equal(gen_tokens, act_end_id))[0]
-        end_idx = ops.where(ops.equal(gen_tokens, end_id))[0]
+        # Print thought process if available
+        if '<|Think|>' in gen_text and '<|/Think|>' in gen_text:
+            thought = gen_text[gen_text.find('<|Think|>')+9 : gen_text.find('<|/Think|>')].strip()
+            print(f"Step {step + 1} Thought: {thought}")
 
         # Case 1: Model generated an <|Act|> block
-        if ops.size(act_end_idx) > 0:
-            out = out[:ct + int(act_end_idx[0]) + 1]
-            text = tokenizer.detokenize(out)
+        if '<|/Act|>' in gen_text:
+            if '<|Act|>' in gen_text:
+                act_content = gen_text[gen_text.find('<|Act|>')+7 : gen_text.find('<|/Act|>')].strip()
+                print(f"Step {step + 1} Action: {act_content}")
 
-            thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: 
-              response = f"Step {step+1} Thought: {thought}"
-              stream(response); full += response
+                # Execute the parsed tool/function
+                if act_content.startswith('search'):
+                    query = act_content[act_content.find('[')+1:act_content.find(']')].strip()
+                    obs = search_duck(query)
+                elif act_content.startswith('calc'):
+                    expr = act_content[act_content.find('[')+1:act_content.find(']')].strip()
+                    obs = calc(expr)
+                else: obs = "Invalid action format."
 
-            act_content = extract(gen_tokens, act_start_id, act_end_id)
-            response = f"Step {step+1} Action: {act_content}"
-            stream(response); full += response
-
-            # Execute the parsed tool/function
-            if act_content.startswith('search'):
-                query = act_content[act_content.find('[')+1:act_content.find(']')].strip()
-                obs = search_duck(query)
-            elif act_content.startswith('calc'):
-                expr = act_content[act_content.find('[')+1:act_content.find(']')].strip()
-                obs = calc(expr)
-            else: obs = "Invalid action format."
-
-            # Force the model to answer on the final step by altering the observation
-            if step == max_steps-2: obs += " Provide the final answer now."
-
-            response = f"Observation: {obs}"; stream(response); full += response
-            # Append observation to context for the next loop
-            text += f" <|Observe|> {obs} <|/Observe|>"
+                # Force the model to answer on the final step by altering the observation
+                if step == max_steps-2: obs += " Provide the final answer now."
+                # Append observation to context for the next loop
+                print(f"Observation: {obs}\n"); text += f" <|Observe|> {obs} <|/Observe|>"
 
         # Case 2: Model generated an <|Answer|> and <|End|>
-        elif ops.size(end_idx) > 0:
-            out = out[:ct + int(end_idx[0]) + 1]
-            # Update context for printing detokenization, optional for return
+        elif '<|End|>' in gen_text:
+            if '<|Answer|>' in gen_text and '<|/Answer|>' in gen_text:
+                ans = gen_text[gen_text.find('<|Answer|>')+10 : gen_text.find('<|/Answer|>')].strip()
+                print(f"Answer: {ans}")
+            return
 
-            thought = extract(gen_tokens, think_start_id, think_end_id)
-            if thought: 
-              response = f"Final Thought: {thought}"; stream(response); full += response
-
-            ans = extract(gen_tokens, ans_start_id, ans_end_id)
-            if ans: response = f"Answer: {ans}"; stream(response); full += response
-            return full
-
-        # Edge case: generation stopped before an Act or End block
-        else: text = tokenizer.detokenize(out)
-
-    response = "Reached max steps."; stream(response); full += response
-    return full
+    print("Reached max steps.")
+    return
 
 # react to user input
 if prompt := st.chat_input('please enter your query'):
