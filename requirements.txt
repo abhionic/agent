@@ -1,6 +1,6 @@
 # Python 3.13
-keras
-keras-hub
+keras-hub==0.29.1
+keras==3.14.1
 jax
 kagglehub
 wikipedia
