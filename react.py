@@ -17,7 +17,9 @@ os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m/1')
 
 path = load_model()
-model = keras.saving.load_model(f'{path}/model.keras')
+model = keras.saving.load_model(f'{path}/model.keras', compile=False)
+sampler = kh.samplers.TopPSampler(temperature=1.0, p=0.1, k=5)
+model.compile(sampler=sampler)
 
 # initialize chat history
 if 'messages' not in st.session_state: st.session_state.messages = []
