@@ -1,7 +1,6 @@
 # Python 3.13
-keras-hub==0.29.1
-keras==3.14.1
-jax
+keras
+keras-hub
 kagglehub
 wikipedia
 ddgs
