@@ -28,7 +28,7 @@ if 'messages' not in st.session_state: st.session_state.messages = []
 def stream(outext):
   def stream_data():
     for word in outext.split(' '): yield word + ' '; time.sleep(0.02)
-  with st.chat_message('assistant'): return st.write_stream(stream_data)
+  with st.chat_message('assistant'): st.write_stream(stream_data)
 
 # display chat messages from history on app rerun
 for message in st.session_state.messages:
@@ -79,7 +79,7 @@ def calc(expr): # calculator tool
     except Exception as e: return f"Error: {e}"
 
 def react_run(question, max_steps=3):
-    text = f'<|User|> {question} <|End|>'; print(f"Question: {question}\n" + "-"*40)
+    text = f'<|User|> {question} <|End|>'; full = ""
     tokenizer = model.preprocessor.tokenizer
 
     # Precompute special token IDs for stopping
@@ -94,13 +94,13 @@ def react_run(question, max_steps=3):
         # Print thought process if available
         if '<|Think|>' in gen_text and '<|/Think|>' in gen_text:
             thought = gen_text[gen_text.find('<|Think|>')+9 : gen_text.find('<|/Think|>')].strip()
-            print(f"Step {step + 1} Thought: {thought}")
+            response = f"Step {step + 1} Thought: {thought}"; stream(response); full += response
 
         # Case 1: Model generated an <|Act|> block
         if '<|/Act|>' in gen_text:
             if '<|Act|>' in gen_text:
                 act_content = gen_text[gen_text.find('<|Act|>')+7 : gen_text.find('<|/Act|>')].strip()
-                print(f"Step {step + 1} Action: {act_content}")
+                response = f"Step {step + 1} Action: {act_content}"; stream(response); full += response
 
                 # Execute the parsed tool/function
                 if act_content.startswith('search'):
@@ -114,17 +114,18 @@ def react_run(question, max_steps=3):
                 # Force the model to answer on the final step by altering the observation
                 if step == max_steps-2: obs += " Provide the final answer now."
                 # Append observation to context for the next loop
-                print(f"Observation: {obs}\n"); text += f" <|Observe|> {obs} <|/Observe|>"
+                response = f"Observation: {obs}\n"; stream(response); full += response 
+                text += f" <|Observe|> {obs} <|/Observe|>"
 
         # Case 2: Model generated an <|Answer|> and <|End|>
         elif '<|End|>' in gen_text:
             if '<|Answer|>' in gen_text and '<|/Answer|>' in gen_text:
                 ans = gen_text[gen_text.find('<|Answer|>')+10 : gen_text.find('<|/Answer|>')].strip()
-                print(f"Answer: {ans}")
-            return
+                response = f"Answer: {ans}"; stream(response); full += response
+            return full
 
-    print("Reached max steps.")
-    return
+    response = "Reached max steps."; stream(response); full += response
+    return full
 
 # react to user input
 if prompt := st.chat_input('please enter your query'):
