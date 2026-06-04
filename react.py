@@ -14,12 +14,15 @@ os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 
 # load the model once and use it across all users and sessions
 @st.cache_resource
-def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m/1')
+def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras', compile=False)
 sampler = kh.samplers.TopPSampler(temperature=1.0, p=0.1, k=5)
-model.compile(sampler=sampler)
+model.compile(sampler=sampler); tok = model.preprocessor.tokenizer
+# architecture patching
+tok.start_token_id = None; tok.end_token_id = tok.token_to_id('<eos>')
+tok.pad_token_id = tok.token_to_id('<pad>'); tok.start_of_image_token_id = None
 
 # initialize chat history
 if 'messages' not in st.session_state: st.session_state.messages = []
@@ -80,10 +83,9 @@ def calc(expr): # calculator tool
 
 def react_run(question, max_steps=3):
     text = f'<|User|> {question} <|End|>'; full = ""
-    tokenizer = model.preprocessor.tokenizer
 
     # Precompute special token IDs for stopping
-    act_end_id = tokenizer.token_to_id('<|/Act|>'); end_id = tokenizer.token_to_id('<|End|>')
+    act_end_id = tok.token_to_id('<|/Act|>'); end_id = tok.token_to_id('<|End|>')
 
     for step in range(max_steps):
         # Generate text
