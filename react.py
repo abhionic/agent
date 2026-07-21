@@ -18,7 +18,7 @@ def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras', compile=False)
-sampler = kh.samplers.TopPSampler(temperature=1.0, p=0.1, k=5)
+sampler = kh.samplers.GreedySampler() #TopPSampler(temperature=1.0, p=0.1, k=5)
 model.compile(sampler=sampler); tok = model.preprocessor.tokenizer
 # architecture patching
 tok.start_token_id = None; tok.end_token_id = tok.token_to_id('<eos>')
