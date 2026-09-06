@@ -1,6 +1,6 @@
 # Abhishek Dutta, Copyright 2026, MIT License.
 
-import streamlit as st; import os; os.environ['KERAS_BACKEND'] = 'jax'
+import streamlit as st; import os; os.environ['KERAS_BACKEND'] = 'tensorflow'
 import keras; from keras import ops
 import keras_hub as kh; import kagglehub
 import wikipedia, json, re; from ddgs import DDGS
