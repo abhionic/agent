@@ -8,13 +8,13 @@ import tensorflow as tf; import time
 if tf.config.list_physical_devices('GPU'):
   keras.mixed_precision.set_global_policy('mixed_float16')
 
-st.title('ReAct Agent')
+st.title('Nano Foundation Model')
 os.environ['KAGGLE_USERNAME'] = st.secrets['kaggle_username']
 os.environ['KAGGLE_KEY'] = st.secrets['kaggle_key']
 
 # load the model once and use it across all users and sessions
 @st.cache_resource
-def load_model(): return kagglehub.model_download('abhionic/agent/keras/15m')
+def load_model(): return kagglehub.model_download('abhionic/agent/keras/50m')
 
 path = load_model()
 model = keras.saving.load_model(f'{path}/model.keras', compile=False)
